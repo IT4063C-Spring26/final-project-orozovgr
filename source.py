@@ -54,13 +54,13 @@
 # 4. Identify correlations between physical activity, stress, and performance  
 # 5. Visualize findings using charts and summary statistics  
 
-# In[22]:
+# In[1]:
 
 
 get_ipython().system('pip install pandas matplotlib seaborn requests')
 
 
-# In[23]:
+# In[2]:
 
 
 # Start your code here
@@ -76,14 +76,14 @@ stress_df = pd.read_csv("data/Stress.csv")
 lifestyle_df.head()
 
 
-# In[24]:
+# In[3]:
 
 
 mental_df.head()
 stress_df.head()
 
 
-# In[25]:
+# In[4]:
 
 
 # API integration (working example)
@@ -97,7 +97,7 @@ print("API loaded:", len(api_data), "records")
 # 
 # In this section, we perform exploratory data analysis (EDA) to understand dataset structure, identify patterns, examine relationships between variables, and detect potential data quality issues.
 
-# In[26]:
+# In[5]:
 
 
 # Check dataset structure
@@ -120,14 +120,14 @@ stress_df.info()
 # 
 # From this, we can identify columns that may require data type conversion or further cleaning.
 
-# In[27]:
+# In[6]:
 
 
 # Summary statistics
 lifestyle_df.describe()
 
 
-# In[28]:
+# In[7]:
 
 
 import matplotlib.pyplot as plt
@@ -138,7 +138,7 @@ import seaborn as sns
 # 
 # This bar chart shows how stress levels vary based on the amount of physical activity. It helps identify whether increased activity is associated with lower stress.
 
-# In[29]:
+# In[8]:
 
 
 import seaborn as sns
@@ -157,7 +157,7 @@ plt.show()
 # 
 # This scatter plot examines the relationship between study time and academic performance.
 
-# In[30]:
+# In[9]:
 
 
 sns.scatterplot(
@@ -173,7 +173,7 @@ plt.show()
 # 
 # This visualization explores whether sleep duration impacts student stress levels.
 
-# In[31]:
+# In[10]:
 
 
 sns.scatterplot(
@@ -189,7 +189,7 @@ plt.show()
 # 
 # This heatmap visualizes relationships between numerical variables and highlights strong correlations.
 
-# In[32]:
+# In[11]:
 
 
 corr = lifestyle_df.corr(numeric_only=True)
@@ -203,7 +203,7 @@ plt.show()
 # 
 # We also analyze the mental health and stress datasets to understand their statistical distributions and compare them with the lifestyle dataset.
 
-# In[33]:
+# In[12]:
 
 
 mental_df.describe()
@@ -221,7 +221,7 @@ stress_df.describe()
 # - The range of values (e.g., study hours, sleep hours, stress levels)
 # - Whether there are unusually high or low values that may indicate outliers
 
-# In[34]:
+# In[13]:
 
 
 # Correlation matrix
@@ -239,7 +239,7 @@ lifestyle_df.corr(numeric_only=True)
 # 
 # These relationships will be further explored in the visualization section.
 
-# In[35]:
+# In[14]:
 
 
 # Check missing values
@@ -252,7 +252,7 @@ lifestyle_df.isnull().sum()
 # 
 # Missing data can affect analysis and model performance. These values will be handled during the data cleaning phase.
 
-# In[36]:
+# In[15]:
 
 
 # Check duplicates
@@ -274,11 +274,184 @@ lifestyle_df.duplicated().sum()
 # - The dataset contains no significant missing or duplicate values, indicating high data quality.
 # - Overall, lifestyle factors such as study time, sleep, and physical activity play a meaningful role in both academic success and stress management.
 
+# ## Machine Learning Plan
+# 
+# In this project, we aim to use machine learning to predict student academic performance (GPA) based on lifestyle factors such as study hours, sleep, physical activity, and stress levels.
+# 
+# ### Model Selection
+# We will use supervised learning models, specifically regression models, since GPA is a continuous numerical variable.
+# 
+# Planned models include:
+# - Linear Regression
+# - Decision Tree Regressor
+# 
+# ### Challenges
+# - Some datasets contain missing values that may affect model performance
+# - Features may be on different scales (e.g., hours vs scores)
+# - Potential presence of categorical variables
+# - Risk of overfitting due to dataset size
+# 
+# ### Approach to Address Challenges
+# - Handle missing values using imputation techniques
+# - Normalize and scale numerical features
+# - Convert or encode categorical variables if necessary
+# - Compare multiple models and evaluate performance using metrics
+
+# ## Data Preparation
+# 
+# In this step, we prepare the dataset for machine learning by separating the features and the target variable, and splitting the data into training and testing sets.
+# 
+# The dataset is split into 80% training data and 20% testing data. This allows the model to learn from one portion of the data and be evaluated on unseen data to measure performance.
+
+# In[16]:
+
+
+get_ipython().system('pip install scikit-learn')
+
+
+# In[17]:
+
+
+from sklearn.model_selection import train_test_split
+
+# Define features (X) and target (y)
+X = lifestyle_df.drop(columns=["GPA"])
+y = lifestyle_df["GPA"]
+
+# Split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# Check shapes
+print("Training set:", X_train.shape)
+print("Testing set:", X_test.shape)
+
+
+# ## Data Processing Pipeline
+# 
+# To properly prepare the dataset for machine learning, i created a preprocessing pipeline that handles both numerical and categorical features.
+# 
+# - Numerical data is cleaned using mean imputation and scaled using standardization
+# - Categorical data is handled using most frequent imputation and one-hot encoding
+# - A ColumnTransformer is used to apply different transformations to different feature types
+# 
+# This ensures consistent and efficient preprocessing before model training.
+
+# In[18]:
+
+
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+
+# Separate features and target
+X = lifestyle_df.drop(columns=["GPA"])
+y = lifestyle_df["GPA"]
+
+# Identify column types
+numeric_features = X.select_dtypes(include=["int64", "float64"]).columns
+categorical_features = X.select_dtypes(include=["object"]).columns
+
+# Pipelines
+numeric_pipeline = Pipeline([
+    ("imputer", SimpleImputer(strategy="mean")),
+    ("scaler", StandardScaler())
+])
+
+categorical_pipeline = Pipeline([
+    ("imputer", SimpleImputer(strategy="most_frequent")),
+    ("encoder", OneHotEncoder(handle_unknown="ignore"))
+])
+
+# Combine both
+preprocessor = ColumnTransformer([
+    ("num", numeric_pipeline, numeric_features),
+    ("cat", categorical_pipeline, categorical_features)
+])
+
+# Apply
+X_train_processed = preprocessor.fit_transform(X_train)
+X_test_processed = preprocessor.transform(X_test)
+
+print("Processed training shape:", X_train_processed.shape)
+print("Processed testing shape:", X_test_processed.shape)
+
+
+# ## Model Training and Evaluation
+# 
+# In this step, I trained multiple machine learning models to predict GPA based on student lifestyle features.
+# 
+# I evaluated the models using Mean Squared Error (MSE) to compare their performance on the test dataset. The model with the lower MSE is considered to perform better.
+
+# In[21]:
+
+
+from sklearn.linear_model import LinearRegression
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.metrics import mean_squared_error, r2_score
+
+# Linear Regression
+lr_model = LinearRegression()
+lr_model.fit(X_train_processed, y_train)
+y_pred_lr = lr_model.predict(X_test_processed)
+
+# Decision Tree
+dt_model = DecisionTreeRegressor(random_state=42)
+dt_model.fit(X_train_processed, y_train)
+y_pred_dt = dt_model.predict(X_test_processed)
+
+# Evaluation
+mse_lr = mean_squared_error(y_test, y_pred_lr)
+r2_lr = r2_score(y_test, y_pred_lr)
+
+mse_dt = mean_squared_error(y_test, y_pred_dt)
+r2_dt = r2_score(y_test, y_pred_dt)
+
+print("Linear Regression MSE:", mse_lr)
+print("Linear Regression R2:", r2_lr)
+
+print("Decision Tree MSE:", mse_dt)
+print("Decision Tree R2:", r2_dt)
+
+
+# In[ ]:
+
+
+from sklearn.tree import DecisionTreeRegressor
+
+# Decision Tree model
+dt_model = DecisionTreeRegressor(random_state=42)
+
+# Train
+dt_model.fit(X_train_processed, y_train)
+
+# Predict
+y_pred_dt = dt_model.predict(X_test_processed)
+
+# Evaluate
+mse_dt = mean_squared_error(y_test, y_pred_dt)
+
+print("Decision Tree MSE:", mse_dt)
+
+
+# ### Model Comparison
+# 
+# I evaluated both models using Mean Squared Error (MSE) and R² score.
+# 
+# - Linear Regression provides a simple baseline model and performs well when relationships are linear.
+# - Decision Tree can capture more complex relationships but may overfit the data.
+# 
+# Based on the results, the model with the lower MSE and higher R² score is considered the better-performing model for predicting GPA.
+# 
+# The Decision Tree model may overfit the training data, which can lead to lower performance on unseen test data.
+
 # ## Resources and References
 # *What resources and references have you used for this project?*
 # 📝 <!-- Answer Below -->
 
-# In[37]:
+# In[ ]:
 
 
 # ⚠️ Make sure you run this cell at the end of your notebook before every submission!
